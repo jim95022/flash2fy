@@ -7,22 +7,22 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	cardhttp "flash2fy/internal/adapters/http"
+	cardhttp "flash2fy/internal/adapters/http/card"
 	"flash2fy/internal/adapters/storage"
-	"flash2fy/internal/application"
+	cardapp "flash2fy/internal/application/card"
 )
 
 func main() {
 	repo := storage.NewMemoryCardRepository()
-	service := application.NewCardService(repo)
-	handler := cardhttp.NewCardHandler(service)
+	service := cardapp.NewCardService(repo)
+	handler := cardhttp.NewHandler(service)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	r.Mount("/cards", handler.Routes())
+	r.Mount("/v1/cards", handler.Routes())
 
 	log.Println("card service listening on :8080")
 	if err := http.ListenAndServe(":8080", r); err != nil {

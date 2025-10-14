@@ -7,23 +7,26 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
+
 	"flash2fy/internal/adapters/storage"
-	"flash2fy/internal/application"
+	cardapp "flash2fy/internal/application/card"
 	"flash2fy/internal/domain/card"
 )
 
 type httpTestDeps struct {
-	service *application.CardService
+	service *cardapp.CardService
 	handler http.Handler
 }
 
 func newHTTPTestDeps() httpTestDeps {
 	repo := storage.NewMemoryCardRepository()
-	service := application.NewCardService(repo)
-	handler := NewCardHandler(service).Routes()
+	service := cardapp.NewCardService(repo)
+	router := chi.NewRouter()
+	router.Mount("/v1/cards", NewHandler(service).Routes())
 	return httpTestDeps{
 		service: service,
-		handler: handler,
+		handler: router,
 	}
 }
 
@@ -36,7 +39,7 @@ func TestCreateCardEndpoint(t *testing.T) {
 	}
 	body, _ := json.Marshal(payload)
 
-	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/v1/cards", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
@@ -67,7 +70,7 @@ func TestCreateCardEndpointValidation(t *testing.T) {
 	}
 	body, _ := json.Marshal(payload)
 
-	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/v1/cards", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
@@ -94,7 +97,7 @@ func TestGetCardEndpoint(t *testing.T) {
 		t.Fatalf("setup create failed: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/"+created.ID, nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/cards/"+created.ID, nil)
 	rec := httptest.NewRecorder()
 
 	deps.handler.ServeHTTP(rec, req)
@@ -115,7 +118,7 @@ func TestGetCardEndpoint(t *testing.T) {
 func TestGetCardEndpointNotFound(t *testing.T) {
 	deps := newHTTPTestDeps()
 
-	req := httptest.NewRequest(http.MethodGet, "/missing", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/cards/missing", nil)
 	rec := httptest.NewRecorder()
 
 	deps.handler.ServeHTTP(rec, req)
@@ -138,7 +141,7 @@ func TestUpdateCardEndpoint(t *testing.T) {
 		"back":  "New Back",
 	}
 	body, _ := json.Marshal(payload)
-	req := httptest.NewRequest(http.MethodPut, "/"+created.ID, bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPut, "/v1/cards/"+created.ID, bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
@@ -165,7 +168,7 @@ func TestDeleteCardEndpoint(t *testing.T) {
 		t.Fatalf("setup create failed: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodDelete, "/"+created.ID, nil)
+	req := httptest.NewRequest(http.MethodDelete, "/v1/cards/"+created.ID, nil)
 	rec := httptest.NewRecorder()
 
 	deps.handler.ServeHTTP(rec, req)
@@ -192,7 +195,7 @@ func TestListCardsEndpoint(t *testing.T) {
 		t.Fatalf("setup create failed: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/cards", nil)
 	rec := httptest.NewRecorder()
 
 	deps.handler.ServeHTTP(rec, req)

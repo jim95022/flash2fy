@@ -7,20 +7,20 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"flash2fy/internal/application"
+	cardapp "flash2fy/internal/application/card"
 	"flash2fy/internal/domain/card"
 )
 
-// CardHandler exposes HTTP endpoints for card operations.
-type CardHandler struct {
-	service *application.CardService
+// Handler exposes HTTP endpoints for card operations.
+type Handler struct {
+	service *cardapp.CardService
 }
 
-func NewCardHandler(service *application.CardService) *CardHandler {
-	return &CardHandler{service: service}
+func NewHandler(service *cardapp.CardService) *Handler {
+	return &Handler{service: service}
 }
 
-func (h *CardHandler) Routes() chi.Router {
+func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
 
 	r.Post("/", h.createCard)
@@ -49,7 +49,7 @@ type errorResponse struct {
 	Message string `json:"message"`
 }
 
-func (h *CardHandler) createCard(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) createCard(w http.ResponseWriter, r *http.Request) {
 	var req cardRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request payload")
@@ -69,7 +69,7 @@ func (h *CardHandler) createCard(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, toResponse(c))
 }
 
-func (h *CardHandler) getCard(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) getCard(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	c, err := h.service.GetCard(id)
 	if err != nil {
@@ -84,7 +84,7 @@ func (h *CardHandler) getCard(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, toResponse(c))
 }
 
-func (h *CardHandler) listCards(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) listCards(w http.ResponseWriter, r *http.Request) {
 	cards, err := h.service.ListCards()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -99,7 +99,7 @@ func (h *CardHandler) listCards(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, result)
 }
 
-func (h *CardHandler) updateCard(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) updateCard(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	var req cardRequest
@@ -124,7 +124,7 @@ func (h *CardHandler) updateCard(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, toResponse(c))
 }
 
-func (h *CardHandler) deleteCard(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) deleteCard(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if err := h.service.DeleteCard(id); err != nil {
 		status := http.StatusInternalServerError
