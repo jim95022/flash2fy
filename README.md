@@ -5,6 +5,7 @@ Simple flashcard CRUD API built in Go using a hexagonal architecture.
 ## Requirements
 
 - Go 1.23+ installed locally
+- PostgreSQL 13+ running locally (default DSN assumes `postgres:postgres@localhost:5432`)
 
 ## Setup
 
@@ -24,12 +25,28 @@ make tidy    # tidy go.mod/go.sum
 make fmt     # format Go sources
 ```
 
+## Database
+
+Set up the `cards` table in your PostgreSQL database:
+
+```sql
+CREATE TABLE IF NOT EXISTS cards (
+  id         TEXT PRIMARY KEY,
+  front      TEXT NOT NULL,
+  back       TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+```
+
+The server reads the connection string from `DATABASE_URL`; if not provided it defaults to `postgres://postgres:postgres@localhost:5432/flash2fy?sslmode=disable`.
+
 ## Manual Testing
 
 Run the server and exercise the endpoints:
 
 ```sh
-make run
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/flash2fy?sslmode=disable make run
 # in another shell
 curl -s -X POST http://localhost:8080/v1/cards \
   -H 'Content-Type: application/json' \
@@ -47,3 +64,5 @@ curl -i -X DELETE http://localhost:8080/v1/cards/<id>
 ```
 
 Replace `<id>` with the identifier returned from the create response.
+
+> Tests use the in-memory repository adapter, so `make test` does not require a running PostgreSQL instance.

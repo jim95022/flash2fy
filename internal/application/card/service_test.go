@@ -4,12 +4,12 @@ import (
 	"testing"
 	"time"
 
-	"flash2fy/internal/adapters/storage"
+	cardstorage "flash2fy/internal/adapters/storage/card"
 	"flash2fy/internal/domain/card"
 )
 
 func TestCreateCard(t *testing.T) {
-	repo := storage.NewMemoryCardRepository()
+	repo := cardstorage.NewMemoryRepository()
 	service := NewCardService(repo)
 
 	created, err := service.CreateCard("Question", "Answer")
@@ -28,7 +28,7 @@ func TestCreateCard(t *testing.T) {
 }
 
 func TestCreateCardValidation(t *testing.T) {
-	repo := storage.NewMemoryCardRepository()
+	repo := cardstorage.NewMemoryRepository()
 	service := NewCardService(repo)
 
 	if _, err := service.CreateCard("", ""); err != card.ErrEmptyFront {
@@ -40,7 +40,7 @@ func TestCreateCardValidation(t *testing.T) {
 }
 
 func TestUpdateCard(t *testing.T) {
-	repo := storage.NewMemoryCardRepository()
+	repo := cardstorage.NewMemoryRepository()
 	service := NewCardService(repo)
 
 	created, err := service.CreateCard("Front", "Back")
@@ -63,7 +63,7 @@ func TestUpdateCard(t *testing.T) {
 }
 
 func TestUpdateCardNotFound(t *testing.T) {
-	repo := storage.NewMemoryCardRepository()
+	repo := cardstorage.NewMemoryRepository()
 	service := NewCardService(repo)
 
 	if _, err := service.UpdateCard("missing", "front", "back"); err != card.ErrNotFound {
@@ -72,7 +72,7 @@ func TestUpdateCardNotFound(t *testing.T) {
 }
 
 func TestDeleteCard(t *testing.T) {
-	repo := storage.NewMemoryCardRepository()
+	repo := cardstorage.NewMemoryRepository()
 	service := NewCardService(repo)
 
 	created, err := service.CreateCard("Front", "Back")
