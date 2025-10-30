@@ -32,19 +32,6 @@ func (h *Handler) Routes() chi.Router {
 	return r
 }
 
-type cardRequest struct {
-	Front string `json:"front"`
-	Back  string `json:"back"`
-}
-
-type cardResponse struct {
-	ID        string `json:"id"`
-	Front     string `json:"front"`
-	Back      string `json:"back"`
-	CreatedAt string `json:"createdAt"`
-	UpdatedAt string `json:"updatedAt"`
-}
-
 type errorResponse struct {
 	Message string `json:"message"`
 }
