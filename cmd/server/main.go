@@ -19,20 +19,26 @@ import (
 	cardstorage "flash2fy/internal/adapters/storage/card"
 	cardtelegram "flash2fy/internal/adapters/telegram/cardbot"
 	cardapp "flash2fy/internal/application/card"
+	flashconfig "flash2fy/internal/config"
 )
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	db := mustConnectPostgres()
+	cfg, err := flashconfig.Load()
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
+	db := mustConnectPostgres(cfg.Database.URL)
 	defer db.Close()
 
 	repo := cardstorage.NewPostgresRepository(db)
 	service := cardapp.NewCardService(repo)
 	handler := cardhttp.NewHandler(service)
 
-	if token := os.Getenv("TELEGRAM_BOT_TOKEN"); token != "" {
+	if token := cfg.Telegram.BotToken; token != "" {
 		bot, err := cardtelegram.New(token, service)
 		if err != nil {
 			log.Fatalf("failed to initialize telegram bot: %v", err)
@@ -53,7 +59,7 @@ func main() {
 	r.Mount("/v1/cards", handler.Routes())
 
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    cfg.Server.Addr,
 		Handler: r,
 	}
 
@@ -66,18 +72,13 @@ func main() {
 		}
 	}()
 
-	log.Println("card service listening on :8080")
+	log.Printf("card service listening on %s", cfg.Server.Addr)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatalf("failed to start server: %v", err)
 	}
 }
 
-func mustConnectPostgres() *sql.DB {
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		dsn = "postgres://postgres:postgres@localhost:5432/flash2fy?sslmode=disable"
-	}
-
+func mustConnectPostgres(dsn string) *sql.DB {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		log.Fatalf("failed to open postgres connection: %v", err)

@@ -15,6 +15,18 @@ cd flash2fy
 go mod download
 ```
 
+### Configuration
+
+Runtime configuration comes from environment variables. For local development you can drop a `.env` file in the repo root (not committed) with entries such as:
+
+```
+SERVER_ADDR=:8080
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/flash2fy?sslmode=disable
+TELEGRAM_BOT_TOKEN=<bot-token>
+```
+
+Values from `.env` override the defaults baked into the app; you can also export these variables directly in your shell.
+
 ## Make Targets
 
 ```sh
