@@ -37,6 +37,11 @@ CREATE TABLE IF NOT EXISTS cards (
   created_at TIMESTAMPTZ NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS users (
+  id        TEXT PRIMARY KEY,
+  nickname  TEXT NOT NULL
+);
 ```
 
 The server reads the connection string from `DATABASE_URL`; if not provided it defaults to `postgres://postgres:postgres@localhost:5432/flash2fy?sslmode=disable`.
