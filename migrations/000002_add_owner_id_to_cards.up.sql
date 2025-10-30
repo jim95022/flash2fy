@@ -1,2 +1,0 @@
-ALTER TABLE cards
-    ADD COLUMN IF NOT EXISTS owner_id TEXT DEFAULT '';

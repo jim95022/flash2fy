@@ -1,2 +1,0 @@
-ALTER TABLE cards
-    DROP COLUMN IF EXISTS owner_id;
