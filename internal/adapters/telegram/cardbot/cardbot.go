@@ -9,6 +9,7 @@ import (
 	"github.com/go-telegram/bot/models"
 
 	cardapp "flash2fy/internal/application/card"
+	"flash2fy/internal/domain/card"
 )
 
 // Bot exposes Telegram commands to manage flashcards.
@@ -22,7 +23,13 @@ func New(token string, service *cardapp.CardService, options ...bot.Option) (*Bo
 	if token == "" {
 		return nil, errors.New("telegram bot token must not be empty")
 	}
-	handler := &updateHandler{service: service}
+	handler := &updateHandler{
+		createCard: service.CreateCard,
+		send: func(ctx context.Context, client *bot.Bot, params *bot.SendMessageParams) error {
+			_, err := client.SendMessage(ctx, params)
+			return err
+		},
+	}
 
 	opts := []bot.Option{
 		bot.WithDefaultHandler(handler.handle),
@@ -46,7 +53,8 @@ func (b *Bot) Start(ctx context.Context) {
 }
 
 type updateHandler struct {
-	service *cardapp.CardService
+	createCard func(front, back, ownerID string) (card.Card, error)
+	send       func(ctx context.Context, client *bot.Bot, params *bot.SendMessageParams) error
 }
 
 func (h *updateHandler) handle(ctx context.Context, b *bot.Bot, update *models.Update) {

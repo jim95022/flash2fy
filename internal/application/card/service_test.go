@@ -12,14 +12,14 @@ func TestCreateCard(t *testing.T) {
 	repo := cardstorage.NewMemoryRepository()
 	service := NewCardService(repo)
 
-	created, err := service.CreateCard("Question", "Answer")
+	created, err := service.CreateCard("Question", "Answer", "user-1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	if created.ID == "" {
 		t.Fatalf("expected generated ID, got empty string")
 	}
-	if created.Front != "Question" || created.Back != "Answer" {
+	if created.Front != "Question" || created.Back != "Answer" || created.OwnerID != "user-1" {
 		t.Fatalf("unexpected card payload: %+v", created)
 	}
 	if created.CreatedAt.IsZero() || created.UpdatedAt.IsZero() {
@@ -31,10 +31,10 @@ func TestCreateCardValidation(t *testing.T) {
 	repo := cardstorage.NewMemoryRepository()
 	service := NewCardService(repo)
 
-	if _, err := service.CreateCard("", ""); err != card.ErrEmptyFront {
+	if _, err := service.CreateCard("", "", "user-1"); err != card.ErrEmptyFront {
 		t.Fatalf("expected ErrEmptyFront, got %v", err)
 	}
-	if _, err := service.CreateCard("front", ""); err != nil {
+	if _, err := service.CreateCard("front", "", "user-1"); err != nil {
 		t.Fatalf("expected no error when back is empty, got %v", err)
 	}
 }
@@ -43,7 +43,7 @@ func TestUpdateCard(t *testing.T) {
 	repo := cardstorage.NewMemoryRepository()
 	service := NewCardService(repo)
 
-	created, err := service.CreateCard("Front", "Back")
+	created, err := service.CreateCard("Front", "Back", "user-1")
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestDeleteCard(t *testing.T) {
 	repo := cardstorage.NewMemoryRepository()
 	service := NewCardService(repo)
 
-	created, err := service.CreateCard("Front", "Back")
+	created, err := service.CreateCard("Front", "Back", "user-1")
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}

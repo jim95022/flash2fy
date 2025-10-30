@@ -20,10 +20,10 @@ func NewPostgresRepository(db *sql.DB) *PostgresRepository {
 
 func (r *PostgresRepository) Save(c card.Card) (card.Card, error) {
 	const query = `
-		INSERT INTO cards (id, front, back, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5)`
+		INSERT INTO cards (id, front, back, owner_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)`
 
-	if _, err := r.db.ExecContext(context.Background(), query, c.ID, c.Front, c.Back, c.CreatedAt, c.UpdatedAt); err != nil {
+	if _, err := r.db.ExecContext(context.Background(), query, c.ID, c.Front, c.Back, c.OwnerID, c.CreatedAt, c.UpdatedAt); err != nil {
 		return card.Card{}, fmt.Errorf("insert card: %w", err)
 	}
 
@@ -32,12 +32,12 @@ func (r *PostgresRepository) Save(c card.Card) (card.Card, error) {
 
 func (r *PostgresRepository) FindByID(id string) (card.Card, error) {
 	const query = `
-		SELECT id, front, back, created_at, updated_at
+		SELECT id, front, back, owner_id, created_at, updated_at
 		FROM cards
 		WHERE id = $1`
 
 	var c card.Card
-	err := r.db.QueryRowContext(context.Background(), query, id).Scan(&c.ID, &c.Front, &c.Back, &c.CreatedAt, &c.UpdatedAt)
+	err := r.db.QueryRowContext(context.Background(), query, id).Scan(&c.ID, &c.Front, &c.Back, &c.OwnerID, &c.CreatedAt, &c.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return card.Card{}, card.ErrNotFound
 	}
@@ -50,7 +50,7 @@ func (r *PostgresRepository) FindByID(id string) (card.Card, error) {
 
 func (r *PostgresRepository) FindAll() ([]card.Card, error) {
 	const query = `
-		SELECT id, front, back, created_at, updated_at
+		SELECT id, front, back, owner_id, created_at, updated_at
 		FROM cards
 		ORDER BY created_at ASC`
 
@@ -63,7 +63,7 @@ func (r *PostgresRepository) FindAll() ([]card.Card, error) {
 	var cards []card.Card
 	for rows.Next() {
 		var c card.Card
-		if err := rows.Scan(&c.ID, &c.Front, &c.Back, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.Front, &c.Back, &c.OwnerID, &c.CreatedAt, &c.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan card: %w", err)
 		}
 		cards = append(cards, c)
@@ -79,10 +79,10 @@ func (r *PostgresRepository) FindAll() ([]card.Card, error) {
 func (r *PostgresRepository) Update(c card.Card) (card.Card, error) {
 	const query = `
 		UPDATE cards
-		SET front = $1, back = $2, updated_at = $3
-		WHERE id = $4`
+		SET front = $1, back = $2, owner_id = $3, updated_at = $4
+		WHERE id = $5`
 
-	res, err := r.db.ExecContext(context.Background(), query, c.Front, c.Back, c.UpdatedAt, c.ID)
+	res, err := r.db.ExecContext(context.Background(), query, c.Front, c.Back, c.OwnerID, c.UpdatedAt, c.ID)
 	if err != nil {
 		return card.Card{}, fmt.Errorf("update card: %w", err)
 	}

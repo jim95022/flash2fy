@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS cards (
   id         TEXT PRIMARY KEY,
   front      TEXT NOT NULL,
   back       TEXT NOT NULL,
+  owner_id   TEXT,
   created_at TIMESTAMPTZ NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL
 );

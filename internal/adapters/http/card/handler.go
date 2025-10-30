@@ -43,7 +43,7 @@ func (h *Handler) createCard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c, err := h.service.CreateCard(req.Front, req.Back)
+	c, err := h.service.CreateCard(req.Front, req.Back, req.OwnerID)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err == card.ErrEmptyFront {
@@ -130,6 +130,7 @@ func toResponse(c card.Card) cardResponse {
 		ID:        c.ID,
 		Front:     c.Front,
 		Back:      c.Back,
+		OwnerID:   c.OwnerID,
 		CreatedAt: c.CreatedAt.Format(time.RFC3339Nano),
 		UpdatedAt: c.UpdatedAt.Format(time.RFC3339Nano),
 	}

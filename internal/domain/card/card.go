@@ -16,6 +16,7 @@ type Card struct {
 	ID        string
 	Front     string
 	Back      string
+	OwnerID   string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

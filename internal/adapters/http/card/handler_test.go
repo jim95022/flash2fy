@@ -34,8 +34,9 @@ func TestCreateCardEndpoint(t *testing.T) {
 	deps := newHTTPTestDeps()
 
 	payload := map[string]string{
-		"front": "What is Go?",
-		"back":  "A programming language",
+		"front":   "What is Go?",
+		"back":    "A programming language",
+		"ownerId": "user-1",
 	}
 	body, _ := json.Marshal(payload)
 
@@ -53,7 +54,7 @@ func TestCreateCardEndpoint(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	if resp.Front != payload["front"] || resp.Back != payload["back"] {
+	if resp.Front != payload["front"] || resp.Back != payload["back"] || resp.OwnerID != payload["ownerId"] {
 		t.Fatalf("unexpected response payload: %+v", resp)
 	}
 	if resp.ID == "" {
@@ -65,8 +66,9 @@ func TestCreateCardEndpointValidation(t *testing.T) {
 	deps := newHTTPTestDeps()
 
 	payload := map[string]string{
-		"front": "",
-		"back":  "",
+		"front":   "",
+		"back":    "",
+		"ownerId": "user-1",
 	}
 	body, _ := json.Marshal(payload)
 
@@ -92,7 +94,7 @@ func TestCreateCardEndpointValidation(t *testing.T) {
 func TestGetCardEndpoint(t *testing.T) {
 	deps := newHTTPTestDeps()
 
-	created, err := deps.service.CreateCard("Front", "Back")
+	created, err := deps.service.CreateCard("Front", "Back", "user-1")
 	if err != nil {
 		t.Fatalf("setup create failed: %v", err)
 	}
@@ -113,6 +115,9 @@ func TestGetCardEndpoint(t *testing.T) {
 	if resp.ID != created.ID {
 		t.Fatalf("expected ID %s, got %s", created.ID, resp.ID)
 	}
+	if resp.OwnerID != created.OwnerID {
+		t.Fatalf("expected owner %s, got %s", created.OwnerID, resp.OwnerID)
+	}
 }
 
 func TestGetCardEndpointNotFound(t *testing.T) {
@@ -131,7 +136,7 @@ func TestGetCardEndpointNotFound(t *testing.T) {
 func TestUpdateCardEndpoint(t *testing.T) {
 	deps := newHTTPTestDeps()
 
-	created, err := deps.service.CreateCard("Old Front", "Old Back")
+	created, err := deps.service.CreateCard("Old Front", "Old Back", "user-1")
 	if err != nil {
 		t.Fatalf("setup create failed: %v", err)
 	}
@@ -155,7 +160,7 @@ func TestUpdateCardEndpoint(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	if resp.Front != payload["front"] || resp.Back != payload["back"] {
+	if resp.Front != payload["front"] || resp.Back != payload["back"] || resp.OwnerID != created.OwnerID {
 		t.Fatalf("expected updated payload, got %+v", resp)
 	}
 }
@@ -163,7 +168,7 @@ func TestUpdateCardEndpoint(t *testing.T) {
 func TestDeleteCardEndpoint(t *testing.T) {
 	deps := newHTTPTestDeps()
 
-	created, err := deps.service.CreateCard("Front", "Back")
+	created, err := deps.service.CreateCard("Front", "Back", "user-1")
 	if err != nil {
 		t.Fatalf("setup create failed: %v", err)
 	}
@@ -186,11 +191,11 @@ func TestDeleteCardEndpoint(t *testing.T) {
 func TestListCardsEndpoint(t *testing.T) {
 	deps := newHTTPTestDeps()
 
-	_, err := deps.service.CreateCard("Front A", "Back A")
+	_, err := deps.service.CreateCard("Front A", "Back A", "user-1")
 	if err != nil {
 		t.Fatalf("setup create failed: %v", err)
 	}
-	_, err = deps.service.CreateCard("Front B", "Back B")
+	_, err = deps.service.CreateCard("Front B", "Back B", "user-2")
 	if err != nil {
 		t.Fatalf("setup create failed: %v", err)
 	}
@@ -210,5 +215,12 @@ func TestListCardsEndpoint(t *testing.T) {
 	}
 	if len(resp) != 2 {
 		t.Fatalf("expected 2 cards, got %d", len(resp))
+	}
+	ownersByFront := map[string]string{}
+	for _, c := range resp {
+		ownersByFront[c.Front] = c.OwnerID
+	}
+	if ownersByFront["Front A"] != "user-1" || ownersByFront["Front B"] != "user-2" {
+		t.Fatalf("unexpected owners: %+v", ownersByFront)
 	}
 }

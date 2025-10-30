@@ -18,11 +18,12 @@ func NewCardService(repo ports.CardRepository) *CardService {
 	return &CardService{repo: repo}
 }
 
-func (s *CardService) CreateCard(front, back string) (card.Card, error) {
+func (s *CardService) CreateCard(front, back, ownerID string) (card.Card, error) {
 	newCard := card.Card{
 		ID:        uuid.NewString(),
 		Front:     front,
 		Back:      back,
+		OwnerID:   ownerID,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	}

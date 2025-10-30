@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/go-telegram/bot"
@@ -19,38 +20,40 @@ func (h *updateHandler) dispatch(ctx context.Context, b *bot.Bot, update *models
 		return
 	}
 
-	h.handleCreateCard(ctx, b, chatID, text)
+	h.handleCreateCard(ctx, b, update, text)
 }
 
 func (h *updateHandler) handleCommand(ctx context.Context, b *bot.Bot, chatID int64, text string) {
 	command, _ := splitCommand(text)
 	switch command {
 	case "/start", "/help":
-		h.send(ctx, b, chatID, messageUsage)
+		h.sendMessage(ctx, b, chatID, messageUsage)
 	default:
-		h.send(ctx, b, chatID, messageUnknownCmd)
+		h.sendMessage(ctx, b, chatID, messageUnknownCmd)
 	}
 }
 
-func (h *updateHandler) handleCreateCard(ctx context.Context, b *bot.Bot, chatID int64, message string) {
+func (h *updateHandler) handleCreateCard(ctx context.Context, b *bot.Bot, update *models.Update, message string) {
+	chatID := update.Message.Chat.ID
 	front := strings.TrimSpace(message)
 	if front == "" {
-		h.send(ctx, b, chatID, messageEmptyIgnore)
+		h.sendMessage(ctx, b, chatID, messageEmptyIgnore)
 		return
 	}
 
-	card, err := h.service.CreateCard(front, "")
+	ownerID := resolveOwnerID(update)
+	card, err := h.createCard(front, "", ownerID)
 	if err != nil {
-		h.send(ctx, b, chatID, fmt.Sprintf(messageCreateFail, err))
+		h.sendMessage(ctx, b, chatID, fmt.Sprintf(messageCreateFail, err))
 		return
 	}
 
 	response := fmt.Sprintf(messageCreateOK, card.ID, card.Front, card.Back)
-	h.send(ctx, b, chatID, response)
+	h.sendMessage(ctx, b, chatID, response)
 }
 
-func (h *updateHandler) send(ctx context.Context, b *bot.Bot, chatID int64, message string) {
-	if _, err := b.SendMessage(ctx, &bot.SendMessageParams{
+func (h *updateHandler) sendMessage(ctx context.Context, b *bot.Bot, chatID int64, message string) {
+	if err := h.send(ctx, b, &bot.SendMessageParams{
 		ChatID: chatID,
 		Text:   message,
 	}); err != nil {
@@ -73,4 +76,14 @@ func splitCommand(text string) (cmd string, payload string) {
 		cmd = cmd[:i]
 	}
 	return cmd, payload
+}
+
+func resolveOwnerID(update *models.Update) string {
+	if update.Message != nil && update.Message.From != nil {
+		return strconv.FormatInt(update.Message.From.ID, 10)
+	}
+	if update.Message != nil {
+		return strconv.FormatInt(update.Message.Chat.ID, 10)
+	}
+	return ""
 }

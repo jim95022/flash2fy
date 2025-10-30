@@ -14,6 +14,7 @@ func TestMemoryRepositoryCRUD(t *testing.T) {
 		ID:        "card-1",
 		Front:     "Question",
 		Back:      "Answer",
+		OwnerID:   "user-1",
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -30,8 +31,8 @@ func TestMemoryRepositoryCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("find failed: %v", err)
 	}
-	if found.Back != c.Back {
-		t.Fatalf("expected back %q, got %q", c.Back, found.Back)
+	if found.Back != c.Back || found.OwnerID != c.OwnerID {
+		t.Fatalf("unexpected card after find: %+v", found)
 	}
 
 	all, err := repo.FindAll()
@@ -51,8 +52,8 @@ func TestMemoryRepositoryCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update failed: %v", err)
 	}
-	if updated.Front != updatedCard.Front {
-		t.Fatalf("expected front %q, got %q", updatedCard.Front, updated.Front)
+	if updated.Front != updatedCard.Front || updated.OwnerID != updatedCard.OwnerID {
+		t.Fatalf("unexpected card after update: %+v", updated)
 	}
 
 	if err := repo.Delete(updatedCard.ID); err != nil {
