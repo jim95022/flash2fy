@@ -41,6 +41,12 @@ CREATE TABLE IF NOT EXISTS cards (
 
 The server reads the connection string from `DATABASE_URL`; if not provided it defaults to `postgres://postgres:postgres@localhost:5432/flash2fy?sslmode=disable`.
 
+## Telegram Bot
+
+Set the `TELEGRAM_BOT_TOKEN` environment variable with the token issued by BotFather to enable Telegram integration. When active, any text message you send to the bot becomes the front of a newly created card (back is stored empty).
+
+The bot replies with the generated card identifier and echoes the stored content. Omit `TELEGRAM_BOT_TOKEN` to disable the bot.
+
 ## Manual Testing
 
 Run the server and exercise the endpoints:
