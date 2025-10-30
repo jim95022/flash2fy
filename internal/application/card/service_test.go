@@ -34,8 +34,8 @@ func TestCreateCardValidation(t *testing.T) {
 	if _, err := service.CreateCard("", ""); err != card.ErrEmptyFront {
 		t.Fatalf("expected ErrEmptyFront, got %v", err)
 	}
-	if _, err := service.CreateCard("front", ""); err != card.ErrEmptyBack {
-		t.Fatalf("expected ErrEmptyBack, got %v", err)
+	if _, err := service.CreateCard("front", ""); err != nil {
+		t.Fatalf("expected no error when back is empty, got %v", err)
 	}
 }
 

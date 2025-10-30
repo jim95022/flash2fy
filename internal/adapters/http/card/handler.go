@@ -59,7 +59,7 @@ func (h *Handler) createCard(w http.ResponseWriter, r *http.Request) {
 	c, err := h.service.CreateCard(req.Front, req.Back)
 	if err != nil {
 		status := http.StatusInternalServerError
-		if err == card.ErrEmptyFront || err == card.ErrEmptyBack {
+		if err == card.ErrEmptyFront {
 			status = http.StatusBadRequest
 		}
 		writeError(w, status, err.Error())
@@ -114,7 +114,7 @@ func (h *Handler) updateCard(w http.ResponseWriter, r *http.Request) {
 		switch err {
 		case card.ErrNotFound:
 			status = http.StatusNotFound
-		case card.ErrEmptyFront, card.ErrEmptyBack:
+		case card.ErrEmptyFront:
 			status = http.StatusBadRequest
 		}
 		writeError(w, status, err.Error())
