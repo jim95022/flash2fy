@@ -18,7 +18,10 @@ type (
 	}
 
 	Telegram struct {
-		BotToken string
+		BotToken      string
+		WebhookURL    string
+		WebhookSecret string
+		WebhookPath   string
 	}
 
 	Config struct {
@@ -42,7 +45,10 @@ func Load() (*Config, error) {
 			URL: getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/flash2fy?sslmode=disable"),
 		},
 		Telegram: Telegram{
-			BotToken: getEnv("TELEGRAM_BOT_TOKEN", ""),
+			BotToken:      getEnv("TELEGRAM_BOT_TOKEN", ""),
+			WebhookURL:    getEnv("TELEGRAM_WEBHOOK_URL", ""),
+			WebhookSecret: getEnv("TELEGRAM_WEBHOOK_SECRET", ""),
+			WebhookPath:   getEnv("TELEGRAM_WEBHOOK_PATH", "/telegram/webhook"),
 		},
 	}
 

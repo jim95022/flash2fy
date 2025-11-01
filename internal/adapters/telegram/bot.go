@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -16,6 +17,14 @@ import (
 type Bot struct {
 	service *cardapp.CardService
 	client  *bot.Bot
+}
+
+// WebhookConfig configures the Telegram bot webhook.
+type WebhookConfig struct {
+	URL                string
+	SecretToken        string
+	DropPendingUpdates bool
+	AllowedUpdates     []string
 }
 
 // New constructs a Telegram bot configured to create cards via /add command.
@@ -50,6 +59,36 @@ func New(token string, service *cardapp.CardService, options ...bot.Option) (*Bo
 // Start begins polling for Telegram updates and blocks until ctx is cancelled.
 func (b *Bot) Start(ctx context.Context) {
 	b.client.Start(ctx)
+}
+
+// StartWebhook starts processing updates using Telegram webhooks.
+func (b *Bot) StartWebhook(ctx context.Context) {
+	b.client.StartWebhook(ctx)
+}
+
+// ConfigureWebhook registers a webhook with Telegram API.
+func (b *Bot) ConfigureWebhook(ctx context.Context, cfg WebhookConfig) error {
+	params := &bot.SetWebhookParams{
+		URL:                cfg.URL,
+		DropPendingUpdates: cfg.DropPendingUpdates,
+	}
+	if cfg.SecretToken != "" {
+		params.SecretToken = cfg.SecretToken
+	}
+	if len(cfg.AllowedUpdates) > 0 {
+		params.AllowedUpdates = cfg.AllowedUpdates
+	}
+
+	_, err := b.client.SetWebhook(ctx, params)
+	if err != nil {
+		return fmt.Errorf("set webhook: %w", err)
+	}
+	return nil
+}
+
+// WebhookHandler returns an http.HandlerFunc to process Telegram webhook requests.
+func (b *Bot) WebhookHandler() http.HandlerFunc {
+	return b.client.WebhookHandler()
 }
 
 type updateHandler struct {
