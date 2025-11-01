@@ -1,4 +1,4 @@
-package cardbot
+package telegram
 
 import (
 	"context"

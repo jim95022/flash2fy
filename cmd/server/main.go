@@ -17,7 +17,7 @@ import (
 
 	cardhttp "flash2fy/internal/adapters/http/card"
 	cardstorage "flash2fy/internal/adapters/storage/card"
-	cardtelegram "flash2fy/internal/adapters/telegram/cardbot"
+	telegram "flash2fy/internal/adapters/telegram"
 	cardapp "flash2fy/internal/application/card"
 	flashconfig "flash2fy/internal/config"
 )
@@ -39,7 +39,7 @@ func main() {
 	handler := cardhttp.NewHandler(service)
 
 	if token := cfg.Telegram.BotToken; token != "" {
-		bot, err := cardtelegram.New(token, service)
+		bot, err := telegram.New(token, service)
 		if err != nil {
 			log.Fatalf("failed to initialize telegram bot: %v", err)
 		}
