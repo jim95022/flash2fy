@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"flash2fy/internal/domain/card"
+	"flash2fy/internal/app/domain/card"
 )
 
 // PostgresRepository persists cards in a PostgreSQL database.

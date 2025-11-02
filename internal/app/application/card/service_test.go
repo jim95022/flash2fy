@@ -5,12 +5,12 @@ import (
 	"time"
 
 	cardstorage "flash2fy/internal/adapters/storage/card"
-	"flash2fy/internal/domain/card"
+	"flash2fy/internal/app/domain/card"
 )
 
 func TestCreateCard(t *testing.T) {
 	repo := cardstorage.NewMemoryRepository()
-	service := NewCardService(repo)
+	service := NewService(repo)
 
 	created, err := service.CreateCard("Question", "Answer", "user-1")
 	if err != nil {
@@ -29,7 +29,7 @@ func TestCreateCard(t *testing.T) {
 
 func TestCreateCardValidation(t *testing.T) {
 	repo := cardstorage.NewMemoryRepository()
-	service := NewCardService(repo)
+	service := NewService(repo)
 
 	if _, err := service.CreateCard("", "", "user-1"); err != card.ErrEmptyFront {
 		t.Fatalf("expected ErrEmptyFront, got %v", err)
@@ -41,7 +41,7 @@ func TestCreateCardValidation(t *testing.T) {
 
 func TestUpdateCard(t *testing.T) {
 	repo := cardstorage.NewMemoryRepository()
-	service := NewCardService(repo)
+	service := NewService(repo)
 
 	created, err := service.CreateCard("Front", "Back", "user-1")
 	if err != nil {
@@ -64,7 +64,7 @@ func TestUpdateCard(t *testing.T) {
 
 func TestUpdateCardNotFound(t *testing.T) {
 	repo := cardstorage.NewMemoryRepository()
-	service := NewCardService(repo)
+	service := NewService(repo)
 
 	if _, err := service.UpdateCard("missing", "front", "back"); err != card.ErrNotFound {
 		t.Fatalf("expected ErrNotFound, got %v", err)
@@ -73,7 +73,7 @@ func TestUpdateCardNotFound(t *testing.T) {
 
 func TestDeleteCard(t *testing.T) {
 	repo := cardstorage.NewMemoryRepository()
-	service := NewCardService(repo)
+	service := NewService(repo)
 
 	created, err := service.CreateCard("Front", "Back", "user-1")
 	if err != nil {

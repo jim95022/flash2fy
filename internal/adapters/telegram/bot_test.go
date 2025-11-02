@@ -3,9 +3,9 @@ package telegram
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -13,9 +13,31 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
-	cardapp "flash2fy/internal/application/card"
-	"flash2fy/internal/domain/card"
+	cardstorage "flash2fy/internal/adapters/storage/card"
+	telecardstorage "flash2fy/internal/adapters/storage/telegram/card"
+	teleuserstorage "flash2fy/internal/adapters/storage/telegram/user"
+	userstorage "flash2fy/internal/adapters/storage/user"
+	appcardapp "flash2fy/internal/app/application/card"
+	appuserapp "flash2fy/internal/app/application/user"
+	"flash2fy/internal/app/domain/card"
+	telegramcardapp "flash2fy/internal/telegram/application/card"
+	telegramuserapp "flash2fy/internal/telegram/application/user"
+	telegrmdomain "flash2fy/internal/telegram/domain"
 )
+
+func newTelegramServices() (*telegramcardapp.Service, *telegramuserapp.Service, *cardstorage.MemoryRepository, *telecardstorage.MemoryRepository, *userstorage.MemoryRepository, *teleuserstorage.MemoryRepository) {
+	appCardRepo := cardstorage.NewMemoryRepository()
+	appCardService := appcardapp.NewService(appCardRepo)
+	teleCardRepo := telecardstorage.NewMemoryRepository()
+	cardService := telegramcardapp.NewService(appCardService, teleCardRepo)
+
+	appUserRepo := userstorage.NewMemoryRepository()
+	appUserService := appuserapp.NewService(appUserRepo)
+	teleUserRepo := teleuserstorage.NewMemoryRepository()
+	userService := telegramuserapp.NewService(appUserService, teleUserRepo)
+
+	return cardService, userService, appCardRepo, teleCardRepo, appUserRepo, teleUserRepo
+}
 
 func TestSplitCommand(t *testing.T) {
 	tests := []struct {
@@ -42,21 +64,14 @@ func TestSplitCommand(t *testing.T) {
 }
 
 func TestHandleCreateCard(t *testing.T) {
-	var (
-		capturedChatID   int64
-		capturedMessage  string
-		capturedFront    string
-		capturedOwnerID  string
-		createCardCalled bool
-	)
+	cardService, userService, appCardRepo, teleCardRepo, _, teleUserRepo := newTelegramServices()
 
-	handler := &updateHandler{
-		createCard: func(front, back, ownerID string) (card.Card, error) {
-			createCardCalled = true
-			capturedFront = front
-			capturedOwnerID = ownerID
-			return card.Card{ID: "id-1", Front: front, Back: back, OwnerID: ownerID}, nil
-		},
+	var capturedChatID int64
+	var capturedMessage string
+
+	h := &updateHandler{
+		cardService: cardService,
+		userService: userService,
 		send: func(ctx context.Context, _ *bot.Bot, params *bot.SendMessageParams) error {
 			if id, ok := params.ChatID.(int64); ok {
 				capturedChatID = id
@@ -65,45 +80,57 @@ func TestHandleCreateCard(t *testing.T) {
 			return nil
 		},
 	}
-	var client *bot.Bot
 
 	update := &models.Update{
 		Message: &models.Message{
 			Chat: models.Chat{ID: 123},
-			From: &models.User{ID: 555},
+			From: &models.User{ID: 555, FirstName: "John", LastName: "Doe", Username: "john"},
 			Text: "Create card",
 		},
 	}
 
-	handler.handleCreateCard(context.Background(), client, update, update.Message.Text)
+	h.handleCreateCard(context.Background(), nil, update, update.Message.Text)
 
-	if !createCardCalled {
-		t.Fatalf("expected CreateCard to be invoked")
-	}
-	if capturedFront != "Create card" {
-		t.Fatalf("expected front 'Create card', got %q", capturedFront)
-	}
-	if capturedOwnerID != strconv.FormatInt(update.Message.From.ID, 10) {
-		t.Fatalf("expected owner %s, got %s", strconv.FormatInt(update.Message.From.ID, 10), capturedOwnerID)
-	}
 	if capturedChatID != update.Message.Chat.ID {
-		t.Fatalf("expected chat ID %d, got %d", update.Message.Chat.ID, capturedChatID)
+		t.Fatalf("expected chat id %d, got %d", update.Message.Chat.ID, capturedChatID)
 	}
-	if capturedMessage == "" {
-		t.Fatalf("expected response message to be sent")
+	if !strings.Contains(capturedMessage, "Card created") {
+		t.Fatalf("expected success message, got %q", capturedMessage)
+	}
+
+	cards, err := appCardRepo.FindAll()
+	if err != nil {
+		t.Fatalf("find all cards: %v", err)
+	}
+	if len(cards) != 1 {
+		t.Fatalf("expected 1 card persisted, got %d", len(cards))
+	}
+
+	projection, err := teleCardRepo.FindByCoreID(cards[0].ID)
+	if err != nil {
+		t.Fatalf("expected telegram projection: %v", err)
+	}
+	if projection.OwnerTelegramID != update.Message.From.ID {
+		t.Fatalf("expected projection owner %d, got %d", update.Message.From.ID, projection.OwnerTelegramID)
+	}
+
+	teleUser, err := teleUserRepo.FindByTelegramID(update.Message.From.ID)
+	if err != nil {
+		t.Fatalf("expected telegram user projection: %v", err)
+	}
+	if teleUser.Username != "john" {
+		t.Fatalf("expected username john, got %s", teleUser.Username)
 	}
 }
 
 func TestHandleCreateCardRequiresFront(t *testing.T) {
-	createCalled := false
-	handler := &updateHandler{
-		createCard: func(front, back, ownerID string) (card.Card, error) {
-			createCalled = true
-			return card.Card{}, nil
-		},
-		send: func(ctx context.Context, _ *bot.Bot, params *bot.SendMessageParams) error { return nil },
+	cardService, userService, appCardRepo, _, _, _ := newTelegramServices()
+
+	h := &updateHandler{
+		cardService: cardService,
+		userService: userService,
+		send:        func(ctx context.Context, _ *bot.Bot, _ *bot.SendMessageParams) error { return nil },
 	}
-	var client *bot.Bot
 
 	update := &models.Update{
 		Message: &models.Message{
@@ -112,35 +139,68 @@ func TestHandleCreateCardRequiresFront(t *testing.T) {
 		},
 	}
 
-	handler.handleCreateCard(context.Background(), client, update, update.Message.Text)
-	if createCalled {
-		t.Fatalf("expected CreateCard not to be called for empty message")
+	h.handleCreateCard(context.Background(), nil, update, update.Message.Text)
+
+	cards, err := appCardRepo.FindAll()
+	if err != nil {
+		t.Fatalf("find all cards: %v", err)
+	}
+	if len(cards) != 0 {
+		t.Fatalf("expected no cards to be created, got %d", len(cards))
 	}
 }
 
+type failingAppCardService struct{}
+
+func (failingAppCardService) CreateCard(string, string, string) (card.Card, error) {
+	return card.Card{}, errors.New("boom")
+}
+
+func (failingAppCardService) GetCard(string) (card.Card, error) {
+	return card.Card{}, card.ErrNotFound
+}
+
+func (failingAppCardService) DeleteCard(string) error { return nil }
+
+type noopTelegramCardRepo struct{}
+
+func (noopTelegramCardRepo) Save(telegrmdomain.Card) (telegrmdomain.Card, error) {
+	return telegrmdomain.Card{}, nil
+}
+func (noopTelegramCardRepo) FindByCoreID(string) (telegrmdomain.Card, error) {
+	return telegrmdomain.Card{}, telegrmdomain.ErrCardNotFound
+}
+func (noopTelegramCardRepo) DeleteByCoreID(string) error { return nil }
+
 func TestHandleCreateCardPropagatesError(t *testing.T) {
-	expectedErr := errors.New("boom")
-	var called bool
-	handler := &updateHandler{
-		createCard: func(front, back, ownerID string) (card.Card, error) {
-			called = true
-			return card.Card{}, expectedErr
+	appUserRepo := userstorage.NewMemoryRepository()
+	appUserService := appuserapp.NewService(appUserRepo)
+	teleUserRepo := teleuserstorage.NewMemoryRepository()
+	userService := telegramuserapp.NewService(appUserService, teleUserRepo)
+
+	cardService := telegramcardapp.NewService(failingAppCardService{}, noopTelegramCardRepo{})
+
+	var capturedMessage string
+	h := &updateHandler{
+		cardService: cardService,
+		userService: userService,
+		send: func(ctx context.Context, _ *bot.Bot, params *bot.SendMessageParams) error {
+			capturedMessage = params.Text
+			return nil
 		},
-		send: func(ctx context.Context, _ *bot.Bot, params *bot.SendMessageParams) error { return nil },
 	}
-	var client *bot.Bot
 
 	update := &models.Update{
 		Message: &models.Message{
 			Chat: models.Chat{ID: 111},
-			From: &models.User{ID: 999},
+			From: &models.User{ID: 999, FirstName: "Jane"},
 			Text: "hello",
 		},
 	}
 
-	handler.handleCreateCard(context.Background(), client, update, update.Message.Text)
-	if !called {
-		t.Fatalf("expected CreateCard to be called even when service returns error")
+	h.handleCreateCard(context.Background(), nil, update, update.Message.Text)
+	if !strings.Contains(capturedMessage, "Failed to create card") {
+		t.Fatalf("expected failure message, got %q", capturedMessage)
 	}
 }
 
@@ -152,7 +212,11 @@ func TestConfigureWebhook(t *testing.T) {
 	)
 	var requestObserved bool
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Skipf("skipping webhook test due to listener error: %v", err)
+	}
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestObserved = true
 
 		if r.Method != http.MethodPost {
@@ -183,10 +247,12 @@ func TestConfigureWebhook(t *testing.T) {
 			t.Fatalf("write response: %v", err)
 		}
 	}))
+	server.Listener = listener
+	server.Start()
 	t.Cleanup(server.Close)
 
-	service := cardapp.NewCardService(stubCardRepo{})
-	tg, err := New(token, service, bot.WithSkipGetMe(), bot.WithServerURL(server.URL))
+	cardService, userService, _, _, _, _ := newTelegramServices()
+	tg, err := New(token, cardService, userService, bot.WithSkipGetMe(), bot.WithServerURL(server.URL))
 	if err != nil {
 		t.Fatalf("init telegram bot: %v", err)
 	}
@@ -211,7 +277,11 @@ func TestConfigureWebhookError(t *testing.T) {
 	const token = "token"
 	var secretReceived string
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Skipf("skipping webhook error test due to listener error: %v", err)
+	}
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseMultipartForm(1 << 20); err != nil {
 			t.Fatalf("parse multipart form: %v", err)
 		}
@@ -222,10 +292,12 @@ func TestConfigureWebhookError(t *testing.T) {
 			t.Fatalf("write response: %v", err)
 		}
 	}))
+	server.Listener = listener
+	server.Start()
 	t.Cleanup(server.Close)
 
-	service := cardapp.NewCardService(stubCardRepo{})
-	tg, err := New(token, service, bot.WithSkipGetMe(), bot.WithServerURL(server.URL))
+	cardService, userService, _, _, _, _ := newTelegramServices()
+	tg, err := New(token, cardService, userService, bot.WithSkipGetMe(), bot.WithServerURL(server.URL))
 	if err != nil {
 		t.Fatalf("init telegram bot: %v", err)
 	}
@@ -241,19 +313,3 @@ func TestConfigureWebhookError(t *testing.T) {
 		t.Fatalf("expected no secret_token to be sent, got %q", secretReceived)
 	}
 }
-
-type stubCardRepo struct{}
-
-func (stubCardRepo) Save(c card.Card) (card.Card, error) { return c, nil }
-
-func (stubCardRepo) FindByID(string) (card.Card, error) {
-	return card.Card{}, errors.New("not implemented")
-}
-
-func (stubCardRepo) FindAll() ([]card.Card, error) { return nil, errors.New("not implemented") }
-
-func (stubCardRepo) Update(card.Card) (card.Card, error) {
-	return card.Card{}, errors.New("not implemented")
-}
-
-func (stubCardRepo) Delete(string) error { return errors.New("not implemented") }

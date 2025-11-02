@@ -1,6 +1,6 @@
 package ports
 
-import "flash2fy/internal/domain/card"
+import "flash2fy/internal/app/domain/card"
 
 // CardRepository defines the persistence behavior for cards.
 type CardRepository interface {

@@ -3,7 +3,7 @@ package userstorage
 import (
 	"sync"
 
-	"flash2fy/internal/domain/user"
+	"flash2fy/internal/app/domain/user"
 )
 
 // MemoryRepository persists users in memory; suitable for tests and demos.

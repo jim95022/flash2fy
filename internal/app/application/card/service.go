@@ -5,20 +5,20 @@ import (
 
 	"github.com/google/uuid"
 
-	"flash2fy/internal/domain/card"
-	"flash2fy/internal/ports"
+	"flash2fy/internal/app/domain/card"
+	"flash2fy/internal/app/ports"
 )
 
-// CardService orchestrates card use-cases.
-type CardService struct {
+// Service orchestrates card use-cases.
+type Service struct {
 	repo ports.CardRepository
 }
 
-func NewCardService(repo ports.CardRepository) *CardService {
-	return &CardService{repo: repo}
+func NewService(repo ports.CardRepository) *Service {
+	return &Service{repo: repo}
 }
 
-func (s *CardService) CreateCard(front, back, ownerID string) (card.Card, error) {
+func (s *Service) CreateCard(front, back, ownerID string) (card.Card, error) {
 	newCard := card.Card{
 		ID:        uuid.NewString(),
 		Front:     front,
@@ -34,15 +34,15 @@ func (s *CardService) CreateCard(front, back, ownerID string) (card.Card, error)
 	return s.repo.Save(newCard)
 }
 
-func (s *CardService) GetCard(id string) (card.Card, error) {
+func (s *Service) GetCard(id string) (card.Card, error) {
 	return s.repo.FindByID(id)
 }
 
-func (s *CardService) ListCards() ([]card.Card, error) {
+func (s *Service) ListCards() ([]card.Card, error) {
 	return s.repo.FindAll()
 }
 
-func (s *CardService) UpdateCard(id, front, back string) (card.Card, error) {
+func (s *Service) UpdateCard(id, front, back string) (card.Card, error) {
 	existing, err := s.repo.FindByID(id)
 	if err != nil {
 		return card.Card{}, err
@@ -59,6 +59,6 @@ func (s *CardService) UpdateCard(id, front, back string) (card.Card, error) {
 	return s.repo.Update(existing)
 }
 
-func (s *CardService) DeleteCard(id string) error {
+func (s *Service) DeleteCard(id string) error {
 	return s.repo.Delete(id)
 }

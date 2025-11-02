@@ -10,18 +10,18 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	cardstorage "flash2fy/internal/adapters/storage/card"
-	cardapp "flash2fy/internal/application/card"
-	"flash2fy/internal/domain/card"
+	cardapp "flash2fy/internal/app/application/card"
+	"flash2fy/internal/app/domain/card"
 )
 
 type httpTestDeps struct {
-	service *cardapp.CardService
+	service *cardapp.Service
 	handler http.Handler
 }
 
 func newHTTPTestDeps() httpTestDeps {
 	repo := cardstorage.NewMemoryRepository()
-	service := cardapp.NewCardService(repo)
+	service := cardapp.NewService(repo)
 	router := chi.NewRouter()
 	router.Mount("/v1/cards", NewHandler(service).Routes())
 	return httpTestDeps{

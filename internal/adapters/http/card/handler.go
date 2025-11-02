@@ -7,16 +7,16 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	cardapp "flash2fy/internal/application/card"
-	"flash2fy/internal/domain/card"
+	cardapp "flash2fy/internal/app/application/card"
+	"flash2fy/internal/app/domain/card"
 )
 
 // Handler exposes HTTP endpoints for card operations.
 type Handler struct {
-	service *cardapp.CardService
+	service *cardapp.Service
 }
 
-func NewHandler(service *cardapp.CardService) *Handler {
+func NewHandler(service *cardapp.Service) *Handler {
 	return &Handler{service: service}
 }
 

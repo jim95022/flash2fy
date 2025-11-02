@@ -16,8 +16,14 @@ import (
 
 	cardhttp "flash2fy/internal/adapters/http/card"
 	cardstorage "flash2fy/internal/adapters/storage/card"
-	cardapp "flash2fy/internal/application/card"
+	telecardstorage "flash2fy/internal/adapters/storage/telegram/card"
+	teleuserstorage "flash2fy/internal/adapters/storage/telegram/user"
+	userstorage "flash2fy/internal/adapters/storage/user"
+	appcardapp "flash2fy/internal/app/application/card"
+	appuserapp "flash2fy/internal/app/application/user"
 	flashconfig "flash2fy/internal/config"
+	telegramcardapp "flash2fy/internal/telegram/application/card"
+	telegramuserapp "flash2fy/internal/telegram/application/user"
 )
 
 func run() error {
@@ -35,16 +41,25 @@ func run() error {
 	}
 	defer db.Close()
 
-	repo := cardstorage.NewPostgresRepository(db)
-	service := cardapp.NewCardService(repo)
-	handler := cardhttp.NewHandler(service)
+	appCardRepo := cardstorage.NewPostgresRepository(db)
+	appCardService := appcardapp.NewService(appCardRepo)
+
+	appUserRepo := userstorage.NewPostgresRepository(db)
+	appUserService := appuserapp.NewService(appUserRepo)
+
+	teleCardRepo := telecardstorage.NewMemoryRepository()
+	teleUserRepo := teleuserstorage.NewMemoryRepository()
+	teleCardService := telegramcardapp.NewService(appCardService, teleCardRepo)
+	teleUserService := telegramuserapp.NewService(appUserService, teleUserRepo)
+
+	handler := cardhttp.NewHandler(appCardService)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	if err := setupTelegramWebhook(ctx, r, cfg, service); err != nil {
+	if err := setupTelegramWebhook(ctx, r, cfg, teleCardService, teleUserService); err != nil {
 		return fmt.Errorf("setup telegram webhook: %w", err)
 	}
 

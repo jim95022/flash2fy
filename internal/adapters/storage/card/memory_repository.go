@@ -3,7 +3,7 @@ package cardstorage
 import (
 	"sync"
 
-	"flash2fy/internal/domain/card"
+	"flash2fy/internal/app/domain/card"
 )
 
 // MemoryRepository persists cards in memory; useful for demos and tests.

@@ -1,6 +1,6 @@
 package ports
 
-import "flash2fy/internal/domain/user"
+import "flash2fy/internal/app/domain/user"
 
 // UserRepository defines persistence behavior for users.
 type UserRepository interface {

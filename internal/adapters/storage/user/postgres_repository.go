@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"flash2fy/internal/domain/user"
+	"flash2fy/internal/app/domain/user"
 )
 
 // PostgresRepository persists users in PostgreSQL.

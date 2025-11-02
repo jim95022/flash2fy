@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"flash2fy/internal/domain/card"
+	"flash2fy/internal/app/domain/card"
 )
 
 func TestMemoryRepositoryCRUD(t *testing.T) {

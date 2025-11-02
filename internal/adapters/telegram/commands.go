@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 
 	"github.com/go-telegram/bot"
@@ -41,8 +40,22 @@ func (h *updateHandler) handleCreateCard(ctx context.Context, b *bot.Bot, update
 		return
 	}
 
-	ownerID := resolveOwnerID(update)
-	card, err := h.createCard(front, "", ownerID)
+	if update.Message.From == nil {
+		h.sendMessage(ctx, b, chatID, messageUnknownCmd)
+		return
+	}
+
+	telegramID := update.Message.From.ID
+	name := strings.TrimSpace(update.Message.From.FirstName + " " + update.Message.From.LastName)
+	username := update.Message.From.Username
+
+	_, ctxUser, err := h.userService.EnsureUser(telegramID, name, username)
+	if err != nil {
+		h.sendMessage(ctx, b, chatID, fmt.Sprintf(messageCreateFail, err))
+		return
+	}
+
+	card, err := h.cardService.CreateCard(front, "", ctxUser, chatID)
 	if err != nil {
 		h.sendMessage(ctx, b, chatID, fmt.Sprintf(messageCreateFail, err))
 		return
@@ -76,14 +89,4 @@ func splitCommand(text string) (cmd string, payload string) {
 		cmd = cmd[:i]
 	}
 	return cmd, payload
-}
-
-func resolveOwnerID(update *models.Update) string {
-	if update.Message != nil && update.Message.From != nil {
-		return strconv.FormatInt(update.Message.From.ID, 10)
-	}
-	if update.Message != nil {
-		return strconv.FormatInt(update.Message.Chat.ID, 10)
-	}
-	return ""
 }

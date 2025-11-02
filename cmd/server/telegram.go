@@ -14,11 +14,12 @@ import (
 	telegramapi "github.com/go-telegram/bot"
 
 	telegram "flash2fy/internal/adapters/telegram"
-	cardapp "flash2fy/internal/application/card"
 	flashconfig "flash2fy/internal/config"
+	telegramcardapp "flash2fy/internal/telegram/application/card"
+	telegramuserapp "flash2fy/internal/telegram/application/user"
 )
 
-func setupTelegramWebhook(ctx context.Context, r *chi.Mux, cfg *flashconfig.Config, service *cardapp.CardService) error {
+func setupTelegramWebhook(ctx context.Context, r *chi.Mux, cfg *flashconfig.Config, cardService *telegramcardapp.Service, userService *telegramuserapp.Service) error {
 	if cfg.Telegram.BotToken == "" {
 		log.Println("telegram bot disabled (TELEGRAM_BOT_TOKEN not set)")
 		return nil
@@ -33,7 +34,7 @@ func setupTelegramWebhook(ctx context.Context, r *chi.Mux, cfg *flashconfig.Conf
 		options = append(options, telegramapi.WithWebhookSecretToken(secret))
 	}
 
-	bot, err := telegram.New(cfg.Telegram.BotToken, service, options...)
+	bot, err := telegram.New(cfg.Telegram.BotToken, cardService, userService, options...)
 	if err != nil {
 		return fmt.Errorf("init telegram bot: %w", err)
 	}

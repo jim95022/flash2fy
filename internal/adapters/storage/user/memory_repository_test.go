@@ -3,7 +3,7 @@ package userstorage
 import (
 	"testing"
 
-	"flash2fy/internal/domain/user"
+	"flash2fy/internal/app/domain/user"
 )
 
 func TestMemoryRepositoryCRUD(t *testing.T) {

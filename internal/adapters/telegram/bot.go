@@ -9,14 +9,15 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
-	cardapp "flash2fy/internal/application/card"
-	"flash2fy/internal/domain/card"
+	telegramcardapp "flash2fy/internal/telegram/application/card"
+	telegramuserapp "flash2fy/internal/telegram/application/user"
 )
 
 // Bot exposes Telegram commands to manage flashcards.
 type Bot struct {
-	service *cardapp.CardService
-	client  *bot.Bot
+	cardService *telegramcardapp.Service
+	userService *telegramuserapp.Service
+	client      *bot.Bot
 }
 
 // WebhookConfig configures the Telegram bot webhook.
@@ -27,13 +28,14 @@ type WebhookConfig struct {
 	AllowedUpdates     []string
 }
 
-// New constructs a Telegram bot configured to create cards via /add command.
-func New(token string, service *cardapp.CardService, options ...bot.Option) (*Bot, error) {
+// New constructs a Telegram bot configured to create cards via chat messages.
+func New(token string, cardService *telegramcardapp.Service, userService *telegramuserapp.Service, options ...bot.Option) (*Bot, error) {
 	if token == "" {
 		return nil, errors.New("telegram bot token must not be empty")
 	}
 	handler := &updateHandler{
-		createCard: service.CreateCard,
+		cardService: cardService,
+		userService: userService,
 		send: func(ctx context.Context, client *bot.Bot, params *bot.SendMessageParams) error {
 			_, err := client.SendMessage(ctx, params)
 			return err
@@ -51,8 +53,9 @@ func New(token string, service *cardapp.CardService, options ...bot.Option) (*Bo
 	}
 
 	return &Bot{
-		service: service,
-		client:  client,
+		cardService: cardService,
+		userService: userService,
+		client:      client,
 	}, nil
 }
 
@@ -92,8 +95,9 @@ func (b *Bot) WebhookHandler() http.HandlerFunc {
 }
 
 type updateHandler struct {
-	createCard func(front, back, ownerID string) (card.Card, error)
-	send       func(ctx context.Context, client *bot.Bot, params *bot.SendMessageParams) error
+	cardService *telegramcardapp.Service
+	userService *telegramuserapp.Service
+	send        func(ctx context.Context, client *bot.Bot, params *bot.SendMessageParams) error
 }
 
 func (h *updateHandler) handle(ctx context.Context, b *bot.Bot, update *models.Update) {
